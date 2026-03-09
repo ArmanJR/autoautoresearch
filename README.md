@@ -84,6 +84,47 @@ I think these would be the reasonable hyperparameters to play with. Ask your fav
 - [trevin-creator/autoresearch-mlx](https://github.com/trevin-creator/autoresearch-mlx) (MacOS)
 - [jsegov/autoresearch-win-rtx](https://github.com/jsegov/autoresearch-win-rtx) (Windows)
 
+## Jetson AGX Orin port
+
+This fork has been adapted to run on an **NVIDIA Jetson AGX Orin 32GB** (JetPack 6, CUDA 12.6, PyTorch 2.10). The key changes from upstream:
+
+- **Replaced Flash Attention 3** with PyTorch's built-in `scaled_dot_product_attention` (FA3/kernels package targets Hopper/desktop Ampere and doesn't build on Jetson's SM 8.7).
+- **Removed `torch.compile`** — Triton is not available on aarch64, so the inductor backend fails. Model and optimizer run in eager mode.
+- **Removed `kernels` dependency** and the pinned torch CUDA index from `pyproject.toml` (Jetson uses its own JetPack-provided PyTorch).
+- **Tuned hyperparameters** for the Orin's ~5–24 TFLOPS BF16 throughput (size-dependent) and 30 GB unified memory.
+
+### Setup on Jetson
+
+```bash
+# Install deps (torch is already provided by JetPack)
+pip3 install rustbpe tiktoken pyarrow requests numpy pandas matplotlib
+
+# Clone and prep
+git clone <repo-url> && cd autoresearch
+python3 prepare.py    # download data + train tokenizer
+python3 train.py      # baseline run (~5 min)
+```
+
+### Hyperparameter sweep results
+
+All runs use the fixed 5-minute time budget on a Jetson AGX Orin 32GB with `MAX_SEQ_LEN=512`, `HEAD_DIM=64`, `WINDOW_PATTERN="L"`:
+
+| DEPTH | DEVICE_BATCH_SIZE | TOTAL_BATCH_SIZE | val_bpb | Steps | Params | VRAM |
+|-------|-------------------|------------------|---------|-------|--------|------|
+| 4 | 16 | 2^15 | 1.488 | 872 | 11.5M | 1.2 GB |
+| 8 | 32 | 2^17 | 1.519 | 95 | 50.3M | 6.2 GB |
+| 6 | 32 | 2^17 | 1.419 | 147 | 26.3M | 4.4 GB |
+| 6 | 32 | 2^16 | 1.357 | 279 | 26.3M | 4.4 GB |
+| 6 | 32 | 2^15 | 1.341 | 535 | 26.3M | 4.4 GB |
+| **6** | **32** | **2^14** | **1.338** | **1018** | **26.3M** | **4.3 GB** |
+
+The best configuration is **DEPTH=6, DEVICE_BATCH_SIZE=32, TOTAL_BATCH_SIZE=2^14** (the current defaults in this fork). Key takeaways:
+
+- **DEPTH=8 is too large** — the 50M param model only gets 95 steps, not enough to converge in 5 minutes.
+- **DEPTH=6 (26.3M params) is the sweet spot** — enough capacity while still allowing hundreds of steps.
+- **Smaller batch sizes win** — on this hardware, more optimizer steps matters more than bigger batches. The improvement plateaus around 2^14 (grad_accum=1).
+- **Only 4.3 GB VRAM used** out of 30 GB available, leaving plenty of room for the autonomous agent to experiment with larger architectures.
+
 ## License
 
 MIT
