@@ -6,15 +6,12 @@ This is an experiment to have the LLM do its own research.
 
 To set up a new experiment, work with the user to:
 
-1. **Agree on a run tag**: propose a tag based on today's date (e.g. `mar5`). The branch `autoresearch/<tag>` must not already exist — this is a fresh run.
-2. **Create the branch**: `git checkout -b autoresearch/<tag>` from current master.
-3. **Read the in-scope files**: The repo is small. Read these files for full context:
-   - `README.md` — repository context.
+1. **Read the in-scope files**: The repo is small. Read these files for full context:
    - `prepare.py` — fixed constants, data prep, tokenizer, dataloader, evaluation. Do not modify.
    - `train.py` — the file you modify. Model architecture, optimizer, training loop.
-4. **Verify data exists**: Check that `~/.cache/autoresearch/` contains data shards and a tokenizer. If not, tell the human to run `python3 prepare.py`.
-5. **Initialize results.tsv**: Create `results.tsv` with just the header row. The baseline will be recorded after the first run.
-6. **Confirm and go**: Confirm setup looks good.
+2. **Verify data exists**: Check that `~/.cache/autoresearch/` contains data shards and a tokenizer. If not, tell the human to run `python3 prepare.py`.
+3. **Initialize results.tsv**: Create `results.tsv` with just the header row. The baseline will be recorded after the first run.
+4. **Confirm and go**: Confirm setup looks good.
 
 Once you get confirmation, kick off the experimentation.
 
@@ -67,53 +64,50 @@ When an experiment is done, log it to `results.tsv` (tab-separated, NOT comma-se
 
 The results file lives at a path provided by the `RESULTS_TSV` environment variable. If not set, default to `results.tsv` in the current directory.
 
-The TSV has a header row and 8 columns:
+The TSV has a header row and 7 columns:
 
 ```
-iter	commit	val_bpb	best_val_bpb	memory_gb	status	description	timestamp
+iter	val_bpb	best_val_bpb	memory_gb	status	description	timestamp
 ```
 
 1. iteration number, starting at 1 (sequential counter, incremented for every experiment including crashes)
-2. git commit hash (short, 7 chars)
-3. val_bpb achieved (e.g. 1.234567) — use 0.000000 for crashes
-4. best_val_bpb so far — the running minimum of val_bpb across all kept experiments up to this point (carry forward the previous best on discard/crash)
-5. peak memory in GB, round to .1f (e.g. 12.3 — divide peak_vram_mb by 1024) — use 0.0 for crashes
-6. status: `keep`, `discard`, or `crash`
-7. short text description of what this experiment tried
-8. timestamp in ISO 8601 format (e.g. 2026-03-09T22:15:03)
+2. val_bpb achieved (e.g. 1.234567) — use 0.000000 for crashes
+3. best_val_bpb so far — the running minimum of val_bpb across all kept experiments up to this point (carry forward the previous best on discard/crash)
+4. peak memory in GB, round to .1f (e.g. 12.3 — divide peak_vram_mb by 1024) — use 0.0 for crashes
+5. status: `keep`, `discard`, or `crash`
+6. short text description of what this experiment tried
+7. timestamp in ISO 8601 format (e.g. 2026-03-09T22:15:03)
 
 Example:
 
 ```
-iter	commit	val_bpb	best_val_bpb	memory_gb	status	description	timestamp
-1	a1b2c3d	0.997900	0.997900	44.0	keep	baseline	2026-03-09T22:15:03
-2	b2c3d4e	0.993200	0.993200	44.2	keep	increase LR to 0.04	2026-03-09T22:20:45
-3	c3d4e5f	1.005000	0.993200	44.0	discard	switch to GeLU activation	2026-03-09T22:26:12
-4	d4e5f6g	0.000000	0.993200	0.0	crash	double model width (OOM)	2026-03-09T22:31:58
+iter	val_bpb	best_val_bpb	memory_gb	status	description	timestamp
+1	0.997900	0.997900	44.0	keep	baseline	2026-03-09T22:15:03
+2	0.993200	0.993200	44.2	keep	increase LR to 0.04	2026-03-09T22:20:45
+3	1.005000	0.993200	44.0	discard	switch to GeLU activation	2026-03-09T22:26:12
+4	0.000000	0.993200	0.0	crash	double model width (OOM)	2026-03-09T22:31:58
 ```
 
 ## The experiment loop
 
-The experiment runs on a dedicated branch (e.g. `autoresearch/mar5` or `autoresearch/mar5-gpu0`).
-
 LOOP FOREVER:
 
-1. Look at the git state: the current branch/commit we're on
-2. **Ask your supervisor for direction**: Run `./director` (this may take up to a few minutes, be patient) — it's a program that acts as your supervisor professor. It will give you a suggestion for what to try next. Read its output carefully, then decide: do you agree with the direction? Does it make sense given the current state of the code? You can follow it closely, adapt the core idea, combine it with your own intuition, or ignore it entirely if it's bad advice. It's your call — you're the one writing the code and your judgment matters. The supervisor gives direction; you decide how (or whether) to apply it.
-3. Tune `train.py` with your chosen experimental idea by directly hacking the code.
-4. git commit
-5. Run the experiment: `python3 train.py > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context)
-6. Read out the results: `grep "^val_bpb:\|^peak_vram_mb:" run.log`
-7. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
-8. Record the results in the tsv (NOTE: do not commit the results.tsv file, leave it untracked by git)
-9. If val_bpb improved (lower), you "advance" the branch, keeping the git commit
-10. If val_bpb is equal or worse, you git reset back to where you started
+1. **Ask your supervisor for direction**: Run `./director` (this may take up to a few minutes, be patient) — it's a program that acts as your supervisor professor. It will give you a suggestion for what to try next. Read its output carefully, then decide: do you agree with the direction? Does it make sense given the current state of the code? You can follow it closely, adapt the core idea, combine it with your own intuition, or ignore it entirely if it's bad advice. It's your call — you're the one writing the code and your judgment matters. The supervisor gives direction; you decide how (or whether) to apply it.
+2. Modify `train.py` with your chosen experimental idea.
+3. Run the experiment: `python3 train.py > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context)
+4. Read out the results: `grep "^val_bpb:\|^peak_vram_mb:" run.log`
+5. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
+6. Record the results in the tsv.
+7. If val_bpb improved (lower): save the current code as the new best with `cp train.py train.py.best`
+8. If val_bpb is equal or worse, or it crashed: restore the last good version with `cp train.py.best train.py`
 
 The idea is that you are a researcher working under a supervisor. The supervisor (`./director`) proposes research directions, but you are the hands-on expert. You understand the code, you see the results, and you make the final call on every change. If the supervisor's idea is brilliant, run with it. If it's half-baked, extract what's useful and adapt it. If it's nonsense, ignore it and try something better. The supervisor will have a fresh idea for you every iteration.
 
+**Checkpoint**: `train.py.best` is your checkpoint file. It always contains the last version of `train.py` that improved val_bpb. After the baseline run (first run), immediately `cp train.py train.py.best` to establish the initial checkpoint. On a successful experiment, overwrite it. On a failure, restore from it.
+
 **Timeout**: Each experiment should take ~5 minutes total (+ a few seconds for startup and eval overhead). If a run exceeds 10 minutes, kill it and treat it as a failure (discard and revert).
 
-**Crashes**: If a run crashes (OOM, or a bug, or etc.), use your judgment: If it's something dumb and easy to fix (e.g. a typo, a missing import), fix it and re-run. If the idea itself is fundamentally broken, just skip it, log "crash" as the status in the tsv, and move on.
+**Crashes**: If a run crashes (OOM, or a bug, or etc.), use your judgment: If it's something dumb and easy to fix (e.g. a typo, a missing import), fix it and re-run. If the idea itself is fundamentally broken, just skip it, log "crash" as the status in the tsv, restore from `train.py.best`, and move on.
 
 **NEVER STOP**: Once the experiment loop has begun (after the initial setup), do NOT pause to ask the human if you should continue. Do NOT ask "should I keep going?" or "is this a good stopping point?". The human might be asleep, or gone from a computer and expects you to continue working *indefinitely* until you are manually stopped. You are autonomous. Run `./director` every iteration for fresh ideas — it will always have a new suggestion for you. The loop runs until the human interrupts you, period.
 

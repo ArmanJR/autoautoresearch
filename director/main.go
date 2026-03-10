@@ -174,7 +174,6 @@ func fetchRandomArxiv(logger *log.Logger, cfg directorConfig) (string, string, e
 
 type experiment struct {
 	Iter        string
-	Commit      string
 	ValBPB      string
 	BestValBPB  string
 	MemoryGB    string
@@ -215,20 +214,19 @@ func parseResultsTSV(logger *log.Logger) ([]experiment, error) {
 
 	var experiments []experiment
 	for _, row := range records[1:] {
-		if len(row) < 7 {
+		if len(row) < 6 {
 			continue
 		}
 		e := experiment{
 			Iter:        row[0],
-			Commit:      row[1],
-			ValBPB:      row[2],
-			BestValBPB:  row[3],
-			MemoryGB:    row[4],
-			Status:      row[5],
-			Description: row[6],
+			ValBPB:      row[1],
+			BestValBPB:  row[2],
+			MemoryGB:    row[3],
+			Status:      row[4],
+			Description: row[5],
 		}
-		if len(row) >= 8 {
-			e.Timestamp = row[7]
+		if len(row) >= 7 {
+			e.Timestamp = row[6]
 		}
 		experiments = append(experiments, e)
 	}

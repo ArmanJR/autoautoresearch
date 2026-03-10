@@ -23,6 +23,10 @@ dev/
 results.tsv
 *.png
 
+# Experiment checkpoints & logs
+*.best
+run.log
+
 # Director binaries, logs & secrets
 director/logs/
 */director
