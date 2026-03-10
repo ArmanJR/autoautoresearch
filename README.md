@@ -29,9 +29,11 @@ The output is a tentative suggestion ("I think you could try...") so the upstrea
 ```
 baseline/                 # vanilla autoresearch (control group)
   train.py, prepare.py, program.md
+  .claude/                # agent confinement (hooks + settings)
 
 mad-scientist/            # experiment with director-driven exploration
   train.py, prepare.py, program.md, director, .env
+  .claude/                # agent confinement (hooks + settings)
 
 director/                 # director source code
   main.go
@@ -176,6 +178,8 @@ If the above commands all work ok, your setup is working and you can go into aut
 ## Running the agent
 
 Simply spin up your Claude/Codex or whatever you want in this repo (and disable all permissions), then you can prompt something like:
+
+Each experiment directory includes a `.claude/` folder with a `PreToolUse` hook (`cage.sh`) that prevents the agent from reading or writing files outside its own directory. This ensures experiments stay isolated and agents can't accidentally clobber each other's files.
 
 ```
 Hi have a look at program.md and let's kick off a new experiment! let's do the setup first.
