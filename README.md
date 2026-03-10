@@ -40,6 +40,13 @@ analysis.ipynb            # cross-method comparison (envelope, terminal perf, st
 Makefile
 ```
 
+### Current Experiments
+
+| Name | Director | Description |
+|------|----------|-------------|
+| `baseline` | None | Vanilla autoresearch. The agent decides what to try next on its own. Control group. |
+| `mad-scientist` | DeepSeek Reasoner (temp 1.3) | Before each iteration, the director reads experiment history from `results.tsv` (what worked, what failed, stall detection) and fetches a RANDOM MACHINE LEARNING paper from arxiv, then generates a bold, specific directive the agent must follow. Combining historical awareness with external novelty. |
+
 ### Commands
 
 ```bash
