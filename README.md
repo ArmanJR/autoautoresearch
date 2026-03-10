@@ -57,6 +57,10 @@ Makefile
 
 ![Relative improvement trajectory](h2h_relative_improvement.png)
 
+The biggest single jump came at **iteration 44** — the agent removed the logit softcap (tanh clamping at ±15), dropping val_bpb from 1.309 to 1.299 in one step. Notably, the director had suggested something entirely different (linear attention to break an 8-iteration stall), but the researcher agent ignored it and made a simpler, more effective change on its own. The director's value here was indirect: by flagging the stall and pushing for radical action, it prompted the agent to re-examine the code and spot the softcap as dead weight — something it had overlooked for 43 iterations.
+
+The second jump came at **iteration 67** — this time the agent followed the director's advice almost exactly. After another 8-iteration stall (best stuck at 1.294), the director suggested reducing attention heads from 6 to 4 while increasing HEAD_DIM from 64 to 96 to preserve the embedding dimension. No paper was fetched; this was purely the director's own reasoning. The agent implemented it verbatim (val_bpb 1.294 → 1.290), then kept pushing the same idea through iterations 68–69 (HEAD_DIM=128 → 192), reaching 1.287 before single-head attention went too far. Both jumps were triggered by the same stall-detection mechanism ("8 consecutive failures → go radical"), but with opposite dynamics: iteration 44 succeeded by ignoring the director, iteration 67 by following it.
+
 ### Commands
 
 ```bash
