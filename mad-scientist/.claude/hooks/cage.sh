@@ -39,6 +39,7 @@ check_path() {
 
   case "$resolved" in
     "$PROJECT_DIR/.claude"|"$PROJECT_DIR/.claude"/*) return 1 ;;
+    "$PROJECT_DIR/.director_prefetch.json"|"$PROJECT_DIR/.director_prefetch.json.claimed") return 1 ;;
     "$PROJECT_DIR"|"$PROJECT_DIR"/*) return 0 ;;
     *) return 1 ;;
   esac

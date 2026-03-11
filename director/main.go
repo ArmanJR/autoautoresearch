@@ -15,8 +15,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -284,6 +286,132 @@ Be concrete and specific. Avoid narrative framing ("this paper addresses...", "t
 
 	logger.Printf("paper summary generated (%d chars)", len(summary))
 	return summary, nil
+}
+
+// ---------------------------------------------------------------------------
+// Paper prefetch cache
+// ---------------------------------------------------------------------------
+
+const prefetchCacheFile = ".director_prefetch.json"
+
+type prefetchCache struct {
+	PaperTitle    string `json:"paper_title"`
+	PaperAbstract string `json:"paper_abstract"`
+	PaperSummary  string `json:"paper_summary"`
+	Timestamp     string `json:"timestamp"`
+}
+
+func prefetchCachePath() string {
+	return prefetchCacheFile
+}
+
+// loadPrefetchCache atomically claims the cache by renaming before reading,
+// preventing two concurrent director processes from using the same cache.
+func loadPrefetchCache(logger *log.Logger) *prefetchCache {
+	claimedPath := prefetchCachePath() + ".claimed"
+	if err := os.Rename(prefetchCachePath(), claimedPath); err != nil {
+		return nil
+	}
+
+	data, err := os.ReadFile(claimedPath)
+	os.Remove(claimedPath)
+	if err != nil {
+		return nil
+	}
+
+	var cache prefetchCache
+	if err := json.Unmarshal(data, &cache); err != nil {
+		logger.Printf("WARNING: corrupt prefetch cache, ignoring: %v", err)
+		return nil
+	}
+
+	logger.Printf("loaded prefetch cache (paper: %q)", cache.PaperTitle)
+	return &cache
+}
+
+func savePrefetchCache(logger *log.Logger, cache *prefetchCache) error {
+	cache.Timestamp = time.Now().UTC().Format(time.RFC3339)
+	data, err := json.Marshal(cache)
+	if err != nil {
+		return fmt.Errorf("marshaling prefetch cache: %w", err)
+	}
+	if err := os.WriteFile(prefetchCachePath(), data, 0o644); err != nil {
+		return fmt.Errorf("writing prefetch cache: %w", err)
+	}
+	logger.Printf("saved prefetch cache (paper: %q)", cache.PaperTitle)
+	return nil
+}
+
+// runPrefetch fetches a random paper, summarizes it, and saves to cache.
+func runPrefetch(logger *log.Logger, cfg directorConfig, apiKey string) {
+	logger.Println("prefetch: starting paper fetch and summarization...")
+
+	paperTitle, paperAbstract, arxivEntry, err := fetchRandomArxiv(logger, cfg)
+	if err != nil {
+		logger.Printf("prefetch: arxiv fetch failed: %v", err)
+		return
+	}
+
+	paperSummary := ""
+	if enableFullPaperSummary && arxivEntry != nil {
+		paperID := extractArxivID(arxivEntry)
+		if paperID != "" {
+			fullText, fetchErr := fetchFullPaperText(logger, paperID)
+			if fetchErr != nil {
+				logger.Printf("prefetch: full paper fetch failed: %v", fetchErr)
+			} else {
+				pSum, sumErr := summarizePaper(logger, cfg, apiKey, fullText)
+				if sumErr != nil {
+					logger.Printf("prefetch: paper summarization failed: %v", sumErr)
+				} else {
+					paperSummary = pSum
+				}
+			}
+		}
+	}
+
+	cache := &prefetchCache{
+		PaperTitle:    paperTitle,
+		PaperAbstract: paperAbstract,
+		PaperSummary:  paperSummary,
+	}
+	if err := savePrefetchCache(logger, cache); err != nil {
+		logger.Printf("prefetch: failed to save cache: %v", err)
+	}
+
+	logger.Println("prefetch: done")
+}
+
+// spawnPrefetch launches a detached child process to prefetch the next paper.
+func spawnPrefetch(logger *log.Logger) {
+	exe, err := os.Executable()
+	if err != nil {
+		logger.Printf("WARNING: could not resolve executable for prefetch: %v", err)
+		return
+	}
+
+	args := []string{"--prefetch"}
+	// Carry over --verbose if present
+	for _, arg := range os.Args[1:] {
+		if arg == "--verbose" {
+			args = append(args, "--verbose")
+			break
+		}
+	}
+
+	cmd := exec.Command(exe, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+
+	if err := cmd.Start(); err != nil {
+		logger.Printf("WARNING: could not spawn prefetch process: %v", err)
+		return
+	}
+
+	logger.Printf("spawned prefetch process (pid=%d)", cmd.Process.Pid)
+	// Detach — don't wait for it
+	cmd.Process.Release()
 }
 
 // ---------------------------------------------------------------------------
@@ -619,9 +747,13 @@ func loadAPIKey(logger *log.Logger) string {
 
 func main() {
 	verbose := false
+	prefetchMode := false
 	for _, arg := range os.Args[1:] {
-		if arg == "--verbose" {
+		switch arg {
+		case "--verbose":
 			verbose = true
+		case "--prefetch":
+			prefetchMode = true
 		}
 	}
 
@@ -635,6 +767,12 @@ func main() {
 	cfg := loadConfig(logger)
 	apiKey := loadAPIKey(logger)
 
+	// --prefetch mode: fetch + summarize paper, save to cache, exit.
+	if prefetchMode {
+		runPrefetch(logger, cfg, apiKey)
+		return
+	}
+
 	// 1. Parse experiment history
 	experiments, err := parseResultsTSV(logger)
 	if err != nil {
@@ -642,33 +780,43 @@ func main() {
 	}
 	history := formatHistory(experiments)
 
-	// 2. Fetch a random paper
-	paperTitle, paperAbstract, arxivEntry, err := fetchRandomArxiv(logger, cfg)
-	if err != nil {
-		logger.Printf("WARNING: arxiv fetch failed: %v, proceeding without paper", err)
-		paperTitle = "(no paper fetched)"
-		paperAbstract = "No external paper available this round. Generate a directive purely from your knowledge of efficient transformer training techniques."
-	}
+	// 2. Try to load prefetched paper from cache
+	var paperTitle, paperAbstract, paperSummary string
+	if cache := loadPrefetchCache(logger); cache != nil {
+		paperTitle = cache.PaperTitle
+		paperAbstract = cache.PaperAbstract
+		paperSummary = cache.PaperSummary
+		logger.Println("using prefetched paper data")
+	} else {
+		// No cache — fetch synchronously
+		logger.Println("no prefetch cache, fetching paper synchronously")
+		var arxivEntry *arxivEntry
+		paperTitle, paperAbstract, arxivEntry, err = fetchRandomArxiv(logger, cfg)
+		if err != nil {
+			logger.Printf("WARNING: arxiv fetch failed: %v, proceeding without paper", err)
+			paperTitle = "(no paper fetched)"
+			paperAbstract = "No external paper available this round. Generate a directive purely from your knowledge of efficient transformer training techniques."
+		}
 
-	// 2b. Optionally fetch & summarize the full paper
-	paperSummary := ""
-	if enableFullPaperSummary && arxivEntry != nil {
-		paperID := extractArxivID(arxivEntry)
-		if paperID != "" {
-			fullText, fetchErr := fetchFullPaperText(logger, paperID)
-			if fetchErr != nil {
-				logger.Printf("WARNING: full paper fetch failed: %v, no paper summary", fetchErr)
-			} else {
-				pSum, sumErr := summarizePaper(logger, cfg, apiKey, fullText)
-				if sumErr != nil {
-					logger.Printf("WARNING: paper summarization failed: %v, no paper summary", sumErr)
+		// Optionally fetch & summarize the full paper
+		if enableFullPaperSummary && arxivEntry != nil {
+			paperID := extractArxivID(arxivEntry)
+			if paperID != "" {
+				fullText, fetchErr := fetchFullPaperText(logger, paperID)
+				if fetchErr != nil {
+					logger.Printf("WARNING: full paper fetch failed: %v, no paper summary", fetchErr)
 				} else {
-					paperSummary = pSum
-					logger.Printf("paper summary generated")
+					pSum, sumErr := summarizePaper(logger, cfg, apiKey, fullText)
+					if sumErr != nil {
+						logger.Printf("WARNING: paper summarization failed: %v, no paper summary", sumErr)
+					} else {
+						paperSummary = pSum
+						logger.Printf("paper summary generated")
+					}
 				}
+			} else {
+				logger.Printf("WARNING: could not extract arxiv ID, no paper summary")
 			}
-		} else {
-			logger.Printf("WARNING: could not extract arxiv ID, no paper summary")
 		}
 	}
 
@@ -713,6 +861,9 @@ func main() {
 
 	logger.Println("directive generated")
 
-	// 5. Output
+	// 6. Output
 	fmt.Println(result)
+
+	// 7. Spawn prefetch for next iteration
+	spawnPrefetch(logger)
 }
