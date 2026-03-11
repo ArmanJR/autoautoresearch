@@ -1,0 +1,97 @@
+iter	val_bpb	best_val_bpb	memory_gb	status	description	timestamp
+1	1.339469	1.339469	4.2	keep	baseline	2026-03-11T00:19:09-04:00
+2	1.339992	1.339469	4.2	discard	reduce MATRIX_LR from 0.04 to 0.02	2026-03-11T00:26:01-04:00
+3	1.370826	1.339469	5.9	discard	increase depth from 6 to 8 (dim 384->512)	2026-03-11T00:32:57-04:00
+4	1.357676	1.339469	5.0	discard	increase depth from 6 to 7 (dim 384->448)	2026-03-11T00:39:21-04:00
+5	1.441427	1.339469	2.2	discard	halve batch size to 8K (DEVICE_BATCH_SIZE=16)	2026-03-11T00:46:08-04:00
+6	1.341194	1.339469	4.3	discard	double batch size to 32K with grad_accum=2	2026-03-11T00:51:53-04:00
+7	1.347578	1.339469	4.2	discard	increase MATRIX_LR from 0.04 to 0.06	2026-03-11T00:58:02-04:00
+8	1.352785	1.339469	4.9	discard	depth=8 with ASPECT_RATIO=48 (same dim=384 but more layers)	2026-03-11T01:04:00-04:00
+9	1.346669	1.339469	4.2	discard	reduce WARMDOWN_RATIO from 0.5 to 0.3	2026-03-11T01:09:38-04:00
+10	1.337926	1.337926	4.2	keep	increase WARMDOWN_RATIO from 0.5 to 0.6	2026-03-11T01:15:15-04:00
+11	1.336752	1.336752	4.2	keep	increase WARMDOWN_RATIO from 0.6 to 0.7	2026-03-11T01:20:50-04:00
+12	1.336306	1.336306	4.2	keep	increase WARMDOWN_RATIO from 0.7 to 0.8	2026-03-11T01:26:23-04:00
+13	1.336447	1.336306	4.2	discard	increase WARMDOWN_RATIO from 0.8 to 0.9	2026-03-11T01:32:04-04:00
+14	1.340051	1.336306	4.2	discard	add 5% warmup (WARMUP_RATIO=0.05)	2026-03-11T01:38:43-04:00
+15	1.336250	1.336250	4.2	keep	increase EMBEDDING_LR from 0.6 to 1.0	2026-03-11T01:45:05-04:00
+16	1.337855	1.336250	4.2	discard	increase EMBEDDING_LR from 1.0 to 1.5	2026-03-11T01:50:43-04:00
+17	1.336581	1.336250	4.2	discard	remove weight decay (0.2->0.0)	2026-03-11T01:56:21-04:00
+18	1.335299	1.335299	4.2	keep	reduce weight decay from 0.2 to 0.1	2026-03-11T02:01:56-04:00
+19	1.335454	1.335299	4.2	discard	reduce weight decay from 0.1 to 0.05	2026-03-11T02:07:30-04:00
+20	1.339402	1.335299	4.2	discard	increase softcap from 15 to 30	2026-03-11T02:14:38-04:00
+21	1.332579	1.332579	4.2	keep	set FINAL_LR_FRAC=0.1 (LR decays to 10% not 0%)	2026-03-11T02:20:19-04:00
+22	1.336344	1.332579	4.2	discard	increase FINAL_LR_FRAC from 0.1 to 0.2	2026-03-11T02:25:53-04:00
+23	1.336399	1.332579	4.2	discard	change Adam beta1 from 0.8 to 0.9	2026-03-11T02:32:12-04:00
+24	1.325552	1.325552	3.9	keep	reduce MLP expansion from 4x to 3x (faster throughput)	2026-03-11T02:38:14-04:00
+25	1.326045	1.325552	3.6	discard	reduce MLP expansion from 3x to 2x	2026-03-11T02:44:01-04:00
+26	1.360933	1.325552	3.9	discard	reduce HEAD_DIM from 64 to 32 (12 heads instead of 6)	2026-03-11T02:50:24-04:00
+27	0.000000	1.325552	0.0	crash	torch.compile (Triton not available on Jetson)	2026-03-11T02:51:16-04:00
+28	1.332423	1.325552	3.9	discard	increase UNEMBEDDING_LR from 0.004 to 0.008	2026-03-11T02:56:52-04:00
+29	1.327429	1.325552	3.9	discard	reduce MATRIX_LR from 0.04 to 0.03	2026-03-11T03:03:11-04:00
+30	1.331424	1.325552	3.8	discard	GQA with n_kv_head=3 (half of n_head=6)	2026-03-11T03:09:24-04:00
+31	1.326709	1.325552	3.9	discard	reduce softcap from 15 to 10	2026-03-11T03:15:36-04:00
+32	1.353184	1.325552	3.8	discard	remove value embeddings (too much quality loss)	2026-03-11T03:22:34-04:00
+33	1.317323	1.317323	3.4	keep	remove logit softcap (was 15)	2026-03-11T03:28:52-04:00
+34	1.316121	1.316121	3.4	keep	reduce x0_lambda init from 0.1 to 0.05	2026-03-11T03:34:34-04:00
+35	1.319713	1.316121	3.4	discard	reduce x0_lambda init from 0.05 to 0.02	2026-03-11T03:40:05-04:00
+36	1.317657	1.316121	3.4	discard	increase MATRIX_LR from 0.04 to 0.05	2026-03-11T03:46:18-04:00
+37	1.320590	1.316121	3.4	discard	increase SCALAR_LR from 0.5 to 1.0	2026-03-11T03:51:55-04:00
+38	1.325927	1.316121	3.7	discard	depth=7 ASPECT_RATIO=48 (same dim=384 but 7 layers)	2026-03-11T03:58:01-04:00
+39	1.331262	1.316121	3.4	discard	reduce Muon ns_steps from 5 to 3	2026-03-11T04:03:47-04:00
+40	1.319118	1.316121	3.4	discard	reduce Muon ns_steps from 5 to 4	2026-03-11T04:09:22-04:00
+41	1.619434	1.316121	3.4	discard	add label smoothing=0.1 (train-eval mismatch)	2026-03-11T04:15:50-04:00
+42	1.316554	1.316121	3.4	discard	cosine warmdown instead of linear	2026-03-11T04:22:09-04:00
+43	1.305541	1.305541	3.1	keep	replace ReLU² with SwiGLU activation (iso-parameter)	2026-03-11T04:28:01-04:00
+44	1.311658	1.305541	3.4	discard	depth=7 with SwiGLU (still too slow)	2026-03-11T04:33:53-04:00
+45	1.307377	1.305541	3.1	discard	increase MATRIX_LR from 0.04 to 0.05 with SwiGLU	2026-03-11T04:40:35-04:00
+46	1.305841	1.305541	3.1	discard	reduce WARMDOWN_RATIO from 0.8 to 0.7 with SwiGLU	2026-03-11T04:46:39-04:00
+47	1.304420	1.304420	3.4	keep	increase SwiGLU hidden from 2x to 3x n_embd	2026-03-11T04:52:19-04:00
+48	1.307149	1.304420	3.7	discard	increase SwiGLU hidden from 3x to 4x n_embd	2026-03-11T04:57:59-04:00
+49	1.305451	1.304420	3.4	discard	increase WEIGHT_DECAY from 0.1 to 0.15	2026-03-11T05:04:07-04:00
+50	1.303203	1.303203	3.4	keep	reduce FINAL_LR_FRAC from 0.1 to 0.05	2026-03-11T05:09:44-04:00
+51	1.303762	1.303203	3.4	discard	reduce FINAL_LR_FRAC from 0.05 to 0.02	2026-03-11T05:15:17-04:00
+52	1.303453	1.303203	3.4	discard	reduce EMBEDDING_LR from 1.0 to 0.8	2026-03-11T05:20:55-04:00
+53	1.302357	1.302357	3.4	keep	change Adam beta2 from 0.95 to 0.99	2026-03-11T05:28:36-04:00
+54	1.306450	1.302357	3.4	discard	change RoPE base from 10000 to 1000	2026-03-11T05:34:22-04:00
+55	1.302861	1.302357	3.4	discard	change Muon beta2 from 0.95 to 0.99	2026-03-11T05:40:06-04:00
+56	1.322229	1.302357	4.4	discard	add z-loss regularization 1e-4 (too much overhead)	2026-03-11T05:48:07-04:00
+57	1.309718	1.302357	3.4	discard	depth=5 dim=448 (wider but shallower)	2026-03-11T05:54:18-04:00
+58	1.306316	1.302357	3.4	discard	remove x0_lambdas skip connection	2026-03-11T06:01:01-04:00
+59	1.302586	1.302357	3.4	discard	increase VE gate channels from 32 to 64	2026-03-11T06:06:55-04:00
+60	1.302520	1.302357	3.4	discard	weight tying (shared wte and lm_head)	2026-03-11T06:13:06-04:00
+61	1.303522	1.302357	3.4	discard	GEGLU (GELU instead of SiLU in gated MLP)	2026-03-11T06:20:38-04:00
+62	1.307553	1.302357	3.4	discard	increase UNEMBEDDING_LR from 0.004 to 0.006	2026-03-11T06:27:42-04:00
+63	1.314028	1.302357	3.5	discard	MLP bypass: 128 channels skip SiLU gating (linear shortcut)	2026-03-11T06:36:22-04:00
+64	1.302100	1.302100	3.5	keep	reduce Muon momentum warmup from 300 to 150 steps	2026-03-11T06:43:25-04:00
+65	1.302036	1.302036	3.5	keep	reduce Muon momentum warmup from 150 to 75 steps	2026-03-11T06:49:40-04:00
+66	1.303829	1.302036	3.5	discard	no Muon momentum warmup (constant 0.95)	2026-03-11T06:55:12-04:00
+67	1.308448	1.302036	3.5	discard	increase Muon final momentum from 0.95 to 0.97	2026-03-11T07:00:45-04:00
+68	1.303408	1.302036	3.5	discard	increase Muon momentum start from 0.85 to 0.90	2026-03-11T07:06:14-04:00
+69	1.303116	1.302036	3.5	discard	increase Muon beta2 from 0.95 to 0.99	2026-03-11T07:11:56-04:00
+70	1.304837	1.302036	3.5	discard	increase MATRIX_LR from 0.04 to 0.045	2026-03-11T07:17:26-04:00
+71	1.304396	1.302036	3.5	discard	reduce x0_lambda init from 0.05 to 0.03	2026-03-11T07:23:02-04:00
+72	1.303754	1.302036	3.5	discard	constant weight decay (remove decay schedule)	2026-03-11T07:28:45-04:00
+73	1.313072	1.302036	3.5	discard	parallel attention+MLP (PaLM-style)	2026-03-11T07:34:18-04:00
+74	1.303508	1.302036	3.5	discard	increase x0_lambda init from 0.05 to 0.07	2026-03-11T07:40:40-04:00
+75	1.303462	1.302036	3.5	discard	increase EMBEDDING_LR from 1.0 to 1.2	2026-03-11T07:46:32-04:00
+76	1.304392	1.302036	3.5	discard	remove cautious mask from Muon weight decay	2026-03-11T07:52:08-04:00
+77	1.309876	1.302036	3.6	discard	VE on all 6 layers (was alternating 3/6)	2026-03-11T07:57:52-04:00
+78	1.304200	1.302036	3.5	discard	change Adam beta1 from 0.8 to 0.85	2026-03-11T08:03:23-04:00
+79	1.304354	1.302036	3.5	discard	increase VE gate channels from 32 to 128	2026-03-11T08:09:28-04:00
+80	1.304936	1.302036	3.5	discard	learnable per-head attention temperature (log_scale)	2026-03-11T08:15:40-04:00
+81	1.302551	1.302036	3.5	discard	increase WARMDOWN_RATIO from 0.8 to 0.85	2026-03-11T08:21:15-04:00
+82	1.303822	1.302036	3.5	discard	reduce WEIGHT_DECAY from 0.1 to 0.08	2026-03-11T08:26:44-04:00
+83	1.303878	1.302036	3.5	discard	reduce UNEMBEDDING_LR from 0.004 to 0.003	2026-03-11T08:32:26-04:00
+84	1.306621	1.302036	3.3	discard	reduce SwiGLU hidden from 1152 to 1024	2026-03-11T08:39:37-04:00
+85	0.000000	1.302036	0.0	crash	stochastic depth p=0.1 (None grad crash in Muon)	2026-03-11T08:40:19-04:00
+86	1.303467	1.302036	3.5	discard	reduce FINAL_LR_FRAC from 0.05 to 0.03	2026-03-11T08:46:11-04:00
+87	1.303281	1.302036	3.5	discard	change x0_lambdas betas from (0.96,0.95) to (0.8,0.99)	2026-03-11T08:51:50-04:00
+88	1.311206	1.302036	3.5	discard	add tiny LR warmup (WARMUP_RATIO=0.01)	2026-03-11T08:57:57-04:00
+89	1.304866	1.302036	3.5	discard	increase lm_head init std from 0.001 to 0.01	2026-03-11T09:03:43-04:00
+90	1.302401	1.302036	3.5	discard	increase RoPE base from 10000 to 50000	2026-03-11T09:10:13-04:00
+91	1.304183	1.302036	3.5	discard	reduce SCALAR_LR from 0.5 to 0.3	2026-03-11T09:15:49-04:00
+92	1.302588	1.302036	3.5	discard	reduce VE gate scale from 2 to 1	2026-03-11T09:21:41-04:00
+93	1.302444	1.302036	3.5	discard	increase WEIGHT_DECAY from 0.1 to 0.12	2026-03-11T09:27:23-04:00
+94	1.303745	1.302036	3.5	discard	init attn c_proj with normal(0,0.001) instead of zeros	2026-03-11T09:32:56-04:00
+95	1.302834	1.302036	3.5	discard	reduce embedding init std from 1.0 to 0.5	2026-03-11T09:39:01-04:00
+96	1.307475	1.302036	3.5	discard	shared VE embedding across all layers	2026-03-11T09:47:03-04:00

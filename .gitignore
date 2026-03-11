@@ -33,3 +33,4 @@ run.log
 director/logs/
 */director
 .env
+.director_prefetch.json
